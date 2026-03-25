@@ -1,0 +1,76 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  4.x                                   |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -1 0 0 0 0];
+
+//speed of sound at sea level 340.29
+//mach number M=U/a
+
+//air properties at sea level
+//p 163.615 Pa
+//rho 1.225
+//T 264 K
+//mu 0.00001789
+//gamma 1.4
+//R_air 287.057
+
+internalField   uniform (1500 0 0);
+
+
+boundaryField
+{
+    inlet
+    {
+
+        type            fixedValue;
+        value           uniform (1500 0 0); 
+
+                
+    }
+
+    outlet
+    {
+        type            zeroGradient;
+    }
+
+
+
+    bottom
+    {
+        type            empty;
+    }
+
+    obstacle
+    {   
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+
+    
+    wedgefront
+    {
+        type            wedge;
+    }
+    
+    wedgeback
+    {
+        type            wedge;
+    }
+    
+
+}
+
+// ************************************************************************* //

@@ -1,0 +1,43 @@
+MUTATIONPP_INSTALL = $(HOME)/PATO/src/thirdParty/mutation++/install/
+
+CXX_FLAGS = -I$(MUTATIONPP_INSTALL)/include \
+	    -I$(MUTATIONPP_INSTALL)/include/mutation++ \
+	    -I$(HOME)/PATO/src/thirdParty/mutation++/thirdparty/eigen \
+            -O3 -g
+
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	CXX      = g++
+	CXX_LIBS = $(MUTATIONPP_INSTALL)/lib/libmutation++.so
+endif
+ifeq ($(UNAME_S),Darwin)
+	CXX      = c++
+	CXX_LIBS = $(MUTATIONPP_INSTALL)/lib/libmutation++.dylib
+endif
+
+EXE_INC = \
+    -I$(FOAM_SRC)/thermophysicalModels/basic/lnInclude \
+    -I$(FOAM_SRC)/thermophysicalModels/specie/lnInclude \
+    -I$(FOAM_SRC)/foam/lnInclude \
+    -I$(FOAM_SRC)/finiteVolume/lnInclude \
+    -I$(FOAM_SRC)/turbulenceModels \
+    -I../BCs/lnInclude \
+    -I$(LIB_SRC)/sampling/lnInclude \
+    -I$(LIB_SRC)/lduSolvers/lnInclude \
+    -I$(FOAM_SRC)/meshTools/lnInclude \
+    -I$(MUTATIONPP_INSTALL)/include/mutation++ \
+    -I$(HOME)/PATO/src/thirdParty/mutation++/thirdparty/eigen
+
+EXE_LIBS = \
+    -L$(FOAM_LIBBIN) \
+    -lspecie \
+    -lfiniteVolume \
+    -lfoam \
+    -lrhoCentralFoam \
+    -I$(CXX_LIBS) \
+    -L$(MUTATIONPP_INSTALL)/lib \
+    -lmutation++
+
+
+

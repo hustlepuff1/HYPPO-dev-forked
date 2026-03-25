@@ -1,0 +1,59 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | foam-extend: Open Source CFD                    |
+|  \\    /   O peration     | Version:     4.0                                |
+|   \\  /    A nd           | Web:         http://www.foam-extend.org         |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     hyppo;
+
+startFrom       startTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         0.001;
+
+deltaT          1.0e-8;
+
+writeControl    adjustableRunTime;
+
+writeInterval   0.0001;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  12;
+
+writeCompression uncompressed;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable yes;
+
+adjustTimeStep  yes;
+
+order           1;
+
+maxCo           4;
+
+minCo           0.002;
+
+maxDeltaT       1;
+
+
+// ************************************************************************* //

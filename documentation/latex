@@ -1,0 +1,344 @@
+\documentclass[12pt]{article}
+
+\usepackage{listings}
+\usepackage{siunitx}
+\usepackage{lscape}
+\usepackage{pdflscape}
+\usepackage{gensymb}
+\usepackage{afterpage}
+\usepackage[utf8]{inputenc}
+\usepackage{multicol}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{textcomp} 
+\usepackage{float}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{circuitikz}
+\usepackage{indentfirst} 
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{ulem}
+\usepackage{fancybox}
+
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0.3pt}
+
+\begin{document}
+
+\begin{titlepage}
+
+\begin{center}
+\fontsize{100}{100}{\textbf{hyper\color{red}P\color{orange}A\color{green!90!blue}T\color{cyan}O}\\
+\end{center}
+
+\begin{center}
+    Jérémy Chevalier\\
+    Dylan Gomesse
+\end{center}
+\tableofcontents
+\end{titlepage}
+\newpage
+
+\section{Introduction}
+hyppo is an implicit coupled supersonic/hypersonic solver based on \textbf{foam-extend-4.1} and \textbf{Mutation++}. It computes the density $\rho$, the velocity $\rho U$, the energy $\rho UE$ from Navier-Sokes equations using an implicit Rusanov scheme. The temperature, the pressure and the gas properties are obtained with different model explained further. A few test cases are available as tutorials.
+
+\section{Navier stokes equations}
+The solver can not be used to computes supersonic/hypersonic flows in rarefied regime. Instead it uses Navier-Stokes equation to solve the problem. The equations are discretized following the finite volume method.
+
+\subsection{Euler and Rusanov}
+The flux are obtained with a Rusanov scheme. By noting I the identity matrix, the Euler equations are written \eqref{Euler}
+
+\begin{equation}
+    \frac{\partial U}{\partial t} + \nabla . F(U) = 0 \\
+    \label{Euler}
+\end{equation}
+
+where
+
+\begin{align}
+\left\lbrace
+\begin{array}{ccc}
+    U &=& (\rho ; \rho \Vec{V} ; E) \\
+    F(U) &=& (\rho \Vec{V} ; \rho \Vec{V} \otimes \Vec{V} + p I ; (E + p)\Vec{V})\\
+\end{array}\right.
+\label{pb_equi}
+\end{align}
+
+The Rusanov scheme \eqref{Rusanov} is a simple and robust scheme
+
+\begin{align}
+\left\lbrace
+\begin{array}{ccc}
+\displaystyle
+    \frac{U^{n+1}_i - U^{n}_i}{\Delta t} + \frac{F_{i+\frac{1}{2}}-F_{i-\frac{1}{2}}}{\Delta x} = 0 \\ \\
+    F_{i+\frac{1}{2}} = \frac{1}{2}\left(F(U_{i+1}) + F(U_i) - \beta_{i+\frac{1}{2}}(U_{i+1} - U{i})   \right)\\ \\
+    \beta_{i+\frac{1}{2}} = max\left\{|u_i| + c_i , |u_{i+1}| + c_{i+1}\right\} \\ \\
+\end{array}\right.
+\label{Rusanov}
+\end{align}
+\newpage
+
+The CFL is calculated thanks to \(\beta_{i+0.5} \frac{\Delta t}{\Delta x} \leq C_{max}\). hyppo is an implicit solver, therefore a limited development of order 1 is performed on the function \(F(U^{n+1})\) thus involving the calculation of a Jacobian by approximating the derivative of \(F(U)\). This can be find in \textbf{numerics/rusanovFlux.H} \cite{b1}.
+\newline
+Then, the equations are assembled in the folder \textbf{Eqns/} and assembled in a matrix solved with GMRES and a Cholesky preconditioner.
+
+
+\subsection{Viscous and diffusive terms}
+Viscous and diffusive terms are also taken into account. We therefore add the terms \(div(\tau)\) and \(div(\tau \Vec{V} + q)\) respectively on \(\rho \Vec{V}\) and \(E\) to the right of the Navier-Stokes equations. These new members are also implicit and discretized using a centered scheme in \textbf{numerics/CenteredFluxViscosity.H}. The heat flux is given by the Fourier relation \eqref{Fourier} and the viscosity tensor is defined by \eqref{viscous}.
+
+\begin{equation}
+    q = \lambda \nabla T
+    \label{Fourier}
+\end{equation}
+
+\begin{equation}
+    \tau = \mu \left(\nabla \Vec{V} + (\nabla \Vec{V})^{T} \right) - \frac{2}{3} \mu div(\Vec{V})I
+    \label{viscous}
+\end{equation}
+
+The addition of these terms involves the calculation of velocity and temperature gradients. In order to overcome the possible non-orthogonality of the mesh, a diamond scheme \cite{b2} is implemented fig.\ref{Turpault}.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[scale = 0.5] {Turpault.png}
+    \caption{Principle of the 2D diamond scheme | R.Turpault }
+    \label{Turpault}
+\end{figure}
+
+On the diagram \ref{Turpault}, the gradient is known in two directions with :
+
+\begin{align}
+\left\lbrace
+\begin{array}{ccc}
+\displaystyle
+    \nabla U . AB = U_B - U_A \\
+    \nabla U . KL = U_L - U_K \\
+\end{array}\right.
+\label{grad}
+\end{align}
+
+By solving the matrix system \eqref{diamond} we can find the gradient defined at the interface of the two cells.
+
+\begin{equation}
+\centering
+\begin{pmatrix}
+x_L - x_K & y_L - y_K \\
+x_B - x_A & y_B - y_A 
+\end{pmatrix} \nabla U = 
+\begin{pmatrix}
+U_L - U_K \\
+U_B - U_A
+\end{pmatrix}
+\label{diamond}
+\end{equation}
+
+\section{Simulation}
+This part presents the different options you can choose to solve your supersonic/hypersonic problem. Note that the constant properties and Sutherland model provide just a supersonic solver due to the assumptions of ideal gas. If you want a hypersonic solver you have to choose a real gas model. These options are available in the file \textbf{system/transportProperties}
+
+\subsection{Courant number}
+As the solver scheme is implicit we can increase the Courant number in order to solve the problem rapidly. The CFL is the same as the start during the first 100 iterations. After this point the CFL is increased of 20\% each 10 iterations until the maximum Courant number specified by the user. The solver does not deal with high values. If the time step is too high and the energy become wrong so the solver decrease the time step until the iteration goes well.
+\subsection{Ideal gas}
+In this section the ideal gas models are described. The solver can deal with constant properties or can use a viscosity model in order to compute the viscosity as a function of the temperature. 
+
+\subsubsection{Constant properties}
+The ideal gas model computes the supersonic flow with constant properties (viscosity, conductivity, heat capacities). To change these values you have to do it manually in the file \textbf{/constant/constantProperties.} Note that $C_v=\frac{C_p}{\gamma}$ and $\gamma$ and $\lambda=\frac{C_p\mu}{Pr}$. Morover, in this case, $T=\frac{e}{C_v}$ where e is the internal energy and the pressure is computed thanks to the perfect gas law.
+
+\begin{table}[H]
+    \centering
+\begin{tabular}{ |c|c|c| }
+
+   \hline
+   Variable & Unit & Value \\
+   \hline
+   $C_p$ & J.$K^{-1}$ & 1004 \\
+   \hline
+   $\gamma$ & - & 1.4 \\
+   \hline
+   $\mu$ & Pa.$s^{-1}$ & $1.85\times 10^{-5}$ \\
+   \hline
+   $Pr$ & - & 1\\
+   \hline
+ \end{tabular}
+     \caption{Default values}
+    \label{defValues}
+\end{table}
+
+\subsubsection{Sutherland model}
+The Sutherland model gives an approximation of the viscosity as a function of the temperature following the next equation.
+\begin{equation}
+    \mu(T)=\mu_{ref}\left(\frac{T}{T_{ref}}\right)^{3/2}\frac{T_{ref}+S}{T+S}
+\end{equation}
+with $S=110.4K \quad T_{ref}=273.15K \quad \mu_{ref}=1.715\times 10^{-5}Pa.s^{-1}$. \\
+
+Theoretically this model gives a good approximation from 170K to 1500K. Note that $\lambda$ is still a function of $\mu$. This model does not change the assumption of ideal gas so we still can compute the temperature as follow $T=\frac{e}{C_v}$.
+
+\subsection{Real gas}
+In this section the real gas models are described. The solver can read table in order to consider equilibrium chemistry. The format of tables is available in appendix. It is possible to use directly a finite rate model to compute the composition of the mixture. Note that this model is being implemented.
+
+\subsubsection{Equilibrium chemistry}
+This model takes into account the dependence of the heat capacities with the temperature and so does not consider a ideal gas anymore.\\ 
+The solver reads thermodynamic tables computed from Mutation++ \cite{b3} (von Karman Institute). With the density and the internal energy M++ gives the temperature, the pressure, the properties of the gas and even the specie composition of the gas.
+\newpage
+
+The air models used are air5 ($O_2$ O $N_2$ N NO) or air11 (e- N N+ O O+ NO $N_2$ $N_2+$ $O^2$ $O^2+$ NO+). To choose the model the user has just to specify the name of the file : air5.txt or air11.txt.\\ Values are interpolated from the table which is already generated in the correct location. If you want to generate your own table go to see the file \textbf{src/thirdParty/mutation++/examples/c++/air\_equilibrium.cpp} or the appendix.\\
+Note that this method is very dependent on the table and it requires to generate a fitted table to get correct results and so know the ranges for $\rho$, P and $T$.
+
+\subsubsection{Finite rate chemistry}
+Instead of the previous model, the finite rate model consider a reaction velocity for the chemical reactions. It is more accurate but adds stiffness. In order to compute and get correct results, the equations \eqref{finiteRate} have to be solved in an fully implicit and coupled way. Once the densities computed, the temperature, the pressure and the gas properties are updated with M++ thanks to densities and the energy of the mixture.
+
+\begin{equation}
+    \frac{\partial \rho_s}{\partial t}+\nabla \cdot(\rho_sU)+\nabla(D_s\nabla\rho_s)=\dot\omega_s
+    \label{finiteRate}
+\end{equation}
+
+To transform the equation fully implicit, the specie production rates have to be implicit. 
+\begin{equation}
+    \dot\omega^{n+1}=\dot\omega^n + J(\rho^n) (\rho^{n+1}-\rho^n)
+\end{equation}
+where $\rho = (\rho_1,...,\rho_n)^T$ and J the jacobian matrix.\\
+
+\begin{center}
+$J(\rho^n)=$ 
+\begin{pmatrix}
+\displaystyle\frac{\partial\dot\omega_1}{\partial\rho_1} & \displaystyle\frac{\partial\dot\omega_1}{\partial\rho_2} & \displaystyle\cdots &\displaystyle\frac{\partial\dot\omega_1}{\partial\rho_n}\\
+\displaystyle\frac{\partial\dot\omega_2}{\partial\rho_1} & \cdots & \cdots & \displaystyle\frac{\partial\dot\omega_2}{\partial\rho_n}\\
+\vdots & \vdots & \vdots & \vdots\\
+\displaystyle\frac{\partial\dot\omega_n}{\partial\rho_1} & \cdots & \cdots & \displaystyle\frac{\partial\dot\omega_n}{\partial\rho_n}
+\end{pmatrix}
+\end{center}
+
+Note that the jacobian is homogenous of degree zero, wich means : $J(\lambda U) = J(u)$ with $\lambda \in \mathbb{R}^*_+$.
+
+\subsection{Turbulence model}
+This option allow you to compute your supersonic/hypersonic flow taking into account turbulence using Baldwin-Lomax model \cite{b4}. This model compute the turbulent viscosity with the following equation.
+\begin{align}
+ \mu_{t} = 
+\left\lbrace
+\begin{array}{ccc}
+    \rho l^2|\omega| \quad &y\leq y_{cross}\\
+    KC_{CP}\rho F_{WAKE}F_{KLEB}\quad &y_{cross}<y\\
+\end{array}\right.
+\label{pb_equi}
+\end{align}
+\begin{align}
+\left\lbrace
+\begin{array}{ccccc}
+    &F_{WAKE}& &=& min\left(y_{max}F_{max} ; C_{wk}y_{max}\frac{u_{DIF}^{2}}{F_{max}}\right) \\
+    &F(y)& &=&  |\omega| y (1-exp(\frac{-y^{+}}{A^{+}})) \\
+    &F_{KLEB}(y)& &=& \left(1-5.5 \left( \frac{y C_{KLEB}}{y_{max}} \right)^{6}    \right)^{-1}\\
+    &u_{DIF}& &=& max(\sqrt{u_{i} u_{i} }) - min(\sqrt{u_{i} u_{i} }) \\
+    &K& &=& 0.0168 \\
+    &C_{cp}& &=& 1.6 \\
+    &C_{wk}& &=& 0.25 \\
+    &C_{KLEB}& &=& 0.3
+\end{array}\right.
+\end{align}
+
+The introduction of a bug in foam-extend 4.1 makes it unusable in many cases. The cellDistFuncs.C file in foam-extend 4.1 must be replaced by the one in version 4.0. \\
+The Baldwin Lomax model also need a good refinement at wall with \(y+\) value equal to 1 in the first cell. For the moment this model is not parallelizable and has boundary layer detection problems. In order to overcome the problems of boundary layer detection made by enthalpy variation, this model is only usable for simulations in front of a body.\\
+In order to avoid catching the shock as a boundary layer, the user defines a time after which the turbulence is activated and the distance in meters that should not be exceeded to avoid catching the shock.\\
+Note that this model needs to be improved.
+\newpage
+
+\section{Tutorials}
+The following table shows the different tutorials. Note that the test cases was not computed in parallel. Some pictures are available in appendix to show what the user is supposed to obtain.
+
+\begin{table}[H]
+    \centering
+\begin{tabular}{ c c c c c }
+
+   \hline
+   \textbf{File name} & \textbf{Mach} & \textbf{Altitude} & \textbf{Model} & \textbf{Running time}\\
+   \hline
+   halfSpherePG & 10 & 20km & Ideal gas & 15s\\
+   \hline
+   halfSphereEquil & 10 & 20km & Equilibrium air5 & 1min\\
+   \hline
+   halfSphereMach50 & 56 & 50km & Equilibrium air11 & 6min\\
+   \hline
+
+ \end{tabular}
+     \caption{Test cases}
+    \label{tuto}
+\end{table}
+
+\subsection{Run a tutorial}
+To run a tutorial of hyppo you need to install \textbf{foam-extend-4.1} , \textbf{OpenFOAM-7} and \textbf{PATO}. If you have already these softwares you can follow the following instructions.
+\vspace{2cm}
+
+\shadowbox{
+\begin{minipage}{\textwidth}
+\begin{center}
+    \underline{How to run a tutorial ?}
+\end{center}
+\begin{itemize}
+    \item Open a terminal in the case folder
+    \item Source 'YOUR\_PATH/openfoam7/etc/bashrc'
+    \item blockMesh
+    \item Open a new terminal in the same location
+    \item Source 'YOUR\_PATH/foam-extend-4.1/etc/bashrc'
+    \item Source 'YOUR\_PATH/PATO/PATO-dev-2.3.1/bashrc'
+    \item hyppo
+\end{itemize}
+\end{minipage}
+}
+\newpage
+\begin{thebibliography}{00}
+
+\bibitem{b1} \textit{Développement d’un solveur compressible vectoriel dans OpenFOAM pour les applications aérospatiales}, A.Figuin, 2019.
+
+
+\bibitem{b2} \textit{Des schémas numériques pour la mécanique des fluides compressibles}, R.Turpault, 2020.
+
+\bibitem{b3} \textit{Développement de méthodes numériques et étude des phénomènes couplés d’écoulement, de rayonnement, et d’ablation dans les problèmes d’entrée atmosphérique}, James Scoggins, 2017.
+
+\bibitem{b4} \textit{Thin Layer Approximation and Algebraic Model for Separated Turbulent Flows}, B.S. Baldwin and H.Lomax, 1978.
+
+
+
+\end{thebibliography}
+\newpage
+\appendix
+\section{Table air5}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{air5_1.png}
+    \includegraphics[width=\textwidth]{air5_2.png}
+    \caption{Examples of table air5}
+    \label{tableAir5}
+\end{figure}
+
+\section{Table air11}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{air11_1.png}
+    \includegraphics[width=\textwidth]{air11_2.png}
+    \caption{Examples of table air11}
+    \label{tableAir11}
+\end{figure}
+
+\section{Tutorials}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{mach50T.png}
+    \caption{Temperature at Mach 56 and 50km}
+    \label{50T}
+\end{figure}
+\newpage
+
+\section{Solver development}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{scheme_hyppo_dev.jpg}
+    \caption{hyppo development scheme}
+    \label{schemeSolver}
+\end{figure}
+
+
+
+\end{document}
+

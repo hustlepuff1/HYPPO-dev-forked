@@ -1,0 +1,22 @@
+# Backup files
+*~
+
+# Emacs' automatic file saving
+\#*\#
+.\#*
+
+# Files used by emerge when merging conflict occur
+*.orig
+
+# Platforms dependant folders
+**/linux*/
+
+# OSX files
+**/*.DS_Store
+**/._*
+
+# Compilation folders and files
+platforms/
+**/lnInclude/
+*.o
+*.dep

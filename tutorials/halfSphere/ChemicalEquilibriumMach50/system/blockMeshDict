@@ -1,0 +1,165 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.5                                   |
+|   \\  /    A nd           | Web:      http://www.OpenFOAM.org               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile {
+  version     2.0;
+  format      ascii;
+  class       dictionary;
+  object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Creating a 2D axi mesh for a cylinder
+
+convertToMeters 1; // convert millimeters in meters
+
+// Cylinder properties
+radiusext 6.5; //  radius ext 5 m
+radiusmid   5.5; //  radius 2m used to separate the mesh in 3 blocks
+radiusint 5; //  radius int 1 m
+l     6.5; //  total length 5 m
+alphaDeg 1; // half angle of the wedge in degrees
+pi      3.1415926535;
+
+
+
+
+
+alpha       #calc "degToRad($alphaDeg)";    
+s           #calc "$radiusext*sin($alpha)";
+s_neg	    #calc "-1.0*$s";
+s_int       #calc "$radiusint*sin($alpha)";
+s_int_neg   #calc "-1.0*$s_int";
+s_mid          #calc "$radiusmid*sin($alpha)";
+s_mid_neg      #calc "-1.0*$s_mid";
+c           #calc "$radiusext*cos($alpha)";
+r           #calc "$l - $radiusint";
+r_mid          #calc "$l - $radiusmid";
+
+arc_x_int       #calc "$l-$radiusint*cos($pi/4)";
+arc_y_int       #calc "$radiusint*sin($pi/4)";
+arc_z_int       #calc "$arc_y_int*sin($alpha)";
+arc_z_int_neg   #calc "-1.0*$arc_z_int";
+
+arc_x_mid       #calc "$l-$radiusmid*cos($pi/4)";
+arc_y_mid       #calc "$radiusmid*sin($pi/4)";
+arc_z_mid       #calc "$arc_y_mid*sin($alpha)";
+arc_z_mid_neg   #calc "-1.0*$arc_z_mid";
+
+arc_x_ext       #calc "$l-$radiusext*cos($pi/4)";
+arc_y_ext       #calc "$radiusext*sin($pi/4)";
+arc_z_ext       #calc "$arc_y_ext*sin($alpha)";
+arc_z_ext_neg   #calc "-1.0*$arc_z_ext";
+
+
+
+
+
+vertices
+(
+    (0 0 0) // 0
+    ($r_mid 0 0) // 1
+    ($r 0 0) // 2
+    ($l $radiusint $s_int_neg) // 3
+    ($l $radiusmid $s_mid_neg) // 4
+    ($l $radiusext $s_neg) // 5
+    
+
+    (0 0 0) // 6
+    ($r_mid 0 0) // 7
+    ($r 0 0) // 8
+    ($l $radiusint $s_int) // 9
+    ($l $radiusmid $s_mid) // 10
+    ($l $radiusext $s) // 11
+);
+
+blocks
+(
+    hex (1 2 3 4 7 8 9 10) (70 70 1) simpleGrading (0.2 1 1) 
+    hex (0 1 4 5 6 7 10 11) (50 70 1) simpleGrading (0.7 1 1)
+
+);
+
+edges
+(
+    arc 2 3 ($arc_x_int $arc_y_int $arc_z_int_neg)
+    arc 8 9 ($arc_x_int $arc_y_int $arc_z_int)
+    arc 1 4 ($arc_x_mid $arc_y_mid $arc_z_mid_neg)
+    arc 7 10 ($arc_x_mid $arc_y_mid $arc_z_mid)
+    arc 0 5 ($arc_x_ext $arc_y_ext $arc_z_ext_neg)
+    arc 6 11 ($arc_x_ext $arc_y_ext $arc_z_ext)
+);
+
+boundary
+(
+    bottom
+    {
+        type empty;
+        faces
+        (
+            (0 6 1 7) //axe symetry leftside
+            (1 8 7 2) //axe symetry rightside          
+        );
+    }
+    
+    inlet
+    {
+        type patch;
+        faces
+        (
+            (5 0 11 6)   
+        );
+    }
+
+    outlet
+    {
+    	type patch;
+    	faces
+    	(   
+    	    
+            (9 3 4 10) // bottom right
+            (10 4 5 11) // top right
+    	);
+    }
+
+
+    obstacle
+    {
+        type wall;
+        faces
+        (
+            (2 3 9 8) // 
+        );
+    }
+
+
+    wedgefront
+    {
+        type wedge;
+        faces
+        ( 
+ 	    (7 8 9 10) 
+        (6 7 10 11) 
+        );
+    }
+    wedgeback
+    {
+        type wedge;
+        faces
+        (  
+ 	    (2 1 3 4) // Back arc
+        (1 0 5 4)
+        );
+    }
+);
+
+
+mergePatchPairs
+(
+);
+
+// ************************************************************************* //

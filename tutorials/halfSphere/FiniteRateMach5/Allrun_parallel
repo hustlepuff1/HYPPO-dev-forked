@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# create volume fields
+
+
+# domain decomposition
+decomposePar -force
+
+# run case on 4 processors
+# mpirun -np 4 renumbermesh -overwrite -parallel 
+mpirun -np 3 hyppo -parallel
+
+# reconstruct domain
+reconstructPar 
+
+#postprocessing 
+paraFoam -touchAll
+
+# -----------------------------------------------------------------------------

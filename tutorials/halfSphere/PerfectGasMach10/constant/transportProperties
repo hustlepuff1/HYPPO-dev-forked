@@ -1,0 +1,29 @@
+/*---------------------------------------------------------------------------*\
+
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      fluidProperties;
+}
+
+// * * * * * *  Units * * * * * [kg m s K mol A cd] * * * * * * * * * * * * * //
+
+model		none; 
+
+/*
+for equilibrium chemistry : readTable
+for finite rate : 			finiteRate (experimental feature)
+for ideal gas : 			none
+for Sutherland :			sutherland
+*/
+
+// if none, constantProperties are used.
+
+// readTable update mu, lambda, Cp, Cv, fluidComposition, temperature and pressure
+
+// ************************************************************************* //

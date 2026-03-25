@@ -1,0 +1,76 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | foam-extend: Open Source CFD                    |
+|  \\    /   O peration     | Version:     4.0                                |
+|   \\  /    A nd           | Web:         http://www.foam-extend.org         |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+
+
+// ************************************************************************* //
+solvers
+{
+ 
+  rhoUE
+    {
+		solver    		GMRES;
+		preconditioner  Cholesky;
+		tolerance       1e-09;
+		relTol          0;
+		minIter         1;
+		maxIter			100;
+		nDirections		5;
+    }
+    
+    rhoS
+    {
+		solver    		GMRES;
+		preconditioner  Cholesky;
+		tolerance       1e-09;
+		relTol          0;
+		minIter         1;
+		maxIter			100;
+		nDirections		5;
+    }
+
+    rho
+    {
+        solver          GMRES;
+        preconditioner  DILU;
+        tolerance       1e-08;
+        relTol          0;
+    }
+
+    rhoU
+    {
+		type			coupled;
+        solver          GMRES;
+        preconditioner  DILU;
+        tolerance       (1e-08 1e-08 1e-08);
+        relTol          (0 0 0);
+    }
+
+    rhoE
+    {
+        solver          GMRES;
+        preconditioner  DILU;
+        tolerance       1e-08;
+        relTol          0;
+    }
+
+  blockSolver
+    {
+      tolerance      1e-09;
+    }
+
+}

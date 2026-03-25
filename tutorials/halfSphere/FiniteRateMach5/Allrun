@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# create volume fields
+cp -rf 0.tutorial/. 0
+
+# run
+sonicFoam
+
+#postprocessing 
+paraFoam
+
+# -----------------------------------------------------------------------------
