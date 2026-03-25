@@ -104,3 +104,7 @@ This bug affected **every gas model** — even with a perfectly valid simulation
 The check `Y_O + Y_NO + Y_N + Y_N2 + Y_O2 != 1` ran for all models, but is only meaningful for finite-rate chemistry.
 
 **Fix**: Wrapped in `if (model == "finiteRate")`.
+
+---
+
+*Bug diagnosis and fixes were performed with the assistance of [Claude Code](https://claude.ai/code) by Anthropic.*
